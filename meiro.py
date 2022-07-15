@@ -18,28 +18,38 @@ class meiro(gym.Env):
     GOAL = 5
     WALL = 9
 
+    def reset_fieldmap(self):
+        self.fieldmap = np.zeros((self.grid_size, self.grid_size))
+        self.fieldmap[3, 5] = self.WALL
+        self.fieldmap[3, 4] = self.WALL
+        self.fieldmap[3, 3] = self.WALL
+        self.fieldmap[3, 2] = self.WALL
+        self.fieldmap[3, 1] = self.WALL
+        self.fieldmap[2, 1] = self.WALL
+        self.fieldmap[1, 1] = self.WALL
+        self.fieldmap[0, 1] = self.WALL
+        self.fieldmap[4, 5] = self.WALL
+        self.fieldmap[5, 5] = self.WALL
+        self.fieldmap[5, 4] = self.WALL
+        self.fieldmap[5, 3] = self.WALL
+        self.fieldmap[5, 2] = self.WALL
+        self.fieldmap[5, 1] = self.WALL
+        self.fieldmap[5, 0] = self.WALL
+
+        # PLAYER
+        self.fieldmap[int(self.grid_size * 0.5), int(self.grid_size * 0.5)] = self.PLAYER
+        self.agent_pos = np.array([int(self.grid_size * 0.5), int(self.grid_size * 0.5)])
+
+        # GOAL
+        self.fieldmap[0, 0] = self.GOAL
+        self.goal_pos = np.array([0, 0])
 
     def __init__(self, grid_size=5):
         super(meiro, self).__init__()
 
         # fields
         self.grid_size = grid_size
-        self.fieldmap = np.zeros((grid_size, grid_size))
-        self.fieldmap[1, 0] = self.WALL
-        self.fieldmap[2, 1] = self.WALL
-        self.fieldmap[4, 2] = self.WALL
-        self.fieldmap[6, 3] = self.WALL
-        self.fieldmap[7, 4] = self.WALL
-        self.fieldmap[2, 5] = self.WALL
-        self.fieldmap[1, 6] = self.WALL
-
-        # PLAYER
-        self.fieldmap[int(grid_size * 0.5), int(grid_size * 0.5)] = self.PLAYER
-        self.agent_pos = np.array([int(grid_size * 0.5), int(grid_size * 0.5)])
-
-        # GOAL
-        self.fieldmap[0, 0] = self.GOAL
-        self.goal_pos = np.array([0, 0])
+        self.reset_fieldmap()
         self.action = 0
         self.reward = 0
 
@@ -53,16 +63,13 @@ class meiro(gym.Env):
 
     def reset(self):
         # initial position
-        init_pos = [int(self.grid_size * 0.5), int(self.grid_size * 0.5)]
-        self.fieldmap[init_pos[0], init_pos[1]] = self.PLAYER
-        self.agent_pos = np.array(
-            [int(self.grid_size * 0.5), int(self.grid_size * 0.5)])
-
+        self.reset_fieldmap()
         # numpy only
         return np.array(self.fieldmap).astype(np.float32)
 
     def step(self, action):
         prev_pos = self.agent_pos.copy()
+        collision_wall = False
 
         # fetch action
         if self.A_L == action:
@@ -74,18 +81,21 @@ class meiro(gym.Env):
         if self.A_D == action:
             self.agent_pos[1] += 1
 
+        if not (0 < self.agent_pos[0] < self.grid_size) or not (0 < self.agent_pos[1] < self.grid_size):
+            collision_wall = True
+
         # moving limit
         self.agent_pos[0] = np.clip(self.agent_pos[0], 0, self.grid_size - 1)
         self.agent_pos[1] = np.clip(self.agent_pos[1], 0, self.grid_size - 1)
 
         # wall check
-        collision_wall = True if self.fieldmap[self.agent_pos[0], self.agent_pos[1]] == self.WALL else False
-        if collision_wall:
+        if self.fieldmap[self.agent_pos[0], self.agent_pos[1]] == self.WALL:
+            collision_wall = True
             # collision wall and set previous pos
             self.agent_pos = prev_pos.copy()
 
         # update fieldmap
-        print(self.agent_pos, prev_pos)
+        # print(self.agent_pos, prev_pos)
         self.fieldmap[prev_pos[0], prev_pos[1]] = self.WAY
         self.fieldmap[self.agent_pos[0], self.agent_pos[1]] = self.PLAYER
 
@@ -95,12 +105,12 @@ class meiro(gym.Env):
         # reward = 0
         reward = (self.grid_size * 0.5) - np.abs(self.goal_pos[0] - self.agent_pos[0])
         reward += (self.grid_size * 0.5) - np.abs(self.goal_pos[1] - self.agent_pos[1])
-        reward *= 0.05
+        # reward *= 0.05
 
         if collision_wall:
-            print("COLLLLLLLLLLLLLLLLL")
+            # print("COLLLLLLLLLLLLLLLLL")
             done = True
-            reward -= 100.0
+            reward -= 10.0
 
         if self.agent_pos[0] == self.goal_pos[0] and self.agent_pos[1] == self.goal_pos[1]:
             done = True

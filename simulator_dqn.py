@@ -45,7 +45,7 @@ agent.save_weights("weights.hdf5")
 obs = env.reset()
 n_steps = 20
 for step in range(n_steps):
-  obs = obs.reshape((1, 1, 2))
+  obs = obs.reshape((1, 1, 9, 9))
   action = model.predict(obs)
   action = np.argmax(action)
   print("Step {}".format(step + 1))
